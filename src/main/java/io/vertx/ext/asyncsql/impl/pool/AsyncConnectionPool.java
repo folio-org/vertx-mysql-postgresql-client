@@ -29,6 +29,8 @@ import io.vertx.ext.asyncsql.impl.VertxEventLoopExecutionContext;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Manages a pool of connection.
@@ -46,6 +48,8 @@ public abstract class AsyncConnectionPool {
   private int poolSize = 0;
   private final Deque<Connection> availableConnections = new ArrayDeque<>();
   private final Deque<Handler<AsyncResult<Connection>>> waiters = new ArrayDeque<>();
+  private Map<Connection,Long> timers = new HashMap<>();
+  private int expiry = 60000; // one minute
 
   public AsyncConnectionPool(Vertx vertx, int maxPoolSize, Configuration configuration) {
     this.vertx = vertx;
@@ -54,6 +58,10 @@ public abstract class AsyncConnectionPool {
   }
 
   protected abstract Connection create();
+
+  public void setExpiry(int ms) {
+    this.expiry = ms;
+  }
 
   private synchronized void createConnection(Handler<AsyncResult<Connection>> handler) {
     poolSize += 1;
@@ -92,6 +100,7 @@ public abstract class AsyncConnectionPool {
     if (connection == null) {
       createOrWaitForAvailableConnection(handler);
     } else {
+      vertx.cancelTimer(timers.remove(connection));
       if (connection.isConnected()) {
         handler.handle(Future.succeededFuture(connection));
       } else {
@@ -108,9 +117,18 @@ public abstract class AsyncConnectionPool {
     }
   }
 
+  private synchronized void expire(Connection connection) {
+    connection.disconnect();
+    availableConnections.remove(connection);
+    poolSize -= 1;
+  }
+
   public synchronized void giveBack(Connection connection) {
     if (connection.isConnected()) {
       availableConnections.add(connection);
+      if (expiry > 0) {
+        timers.put(connection, vertx.setTimer(expiry, res -> expire(connection)));
+      }
     } else {
       poolSize -= 1;
     }
@@ -118,6 +136,10 @@ public abstract class AsyncConnectionPool {
   }
 
   public synchronized void close() {
+    for (long id : timers.values()) {
+      vertx.cancelTimer(id);
+    }
+    timers.clear();
     availableConnections.forEach(Connection::disconnect);
   }
 
