@@ -4,7 +4,7 @@
     <groupId>io.vertx</groupId>
     <artifactId>vertx-mysql-postgresql-client-parent</artifactId>
     <relativePath>../</relativePath>
-    <version>3.8.3-SNAPSHOT</version>
+    <version>3.8.2-FOLIO-1</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -173,4 +173,22 @@
       </dependencies>
     </profile>
   </profiles>
+
+  <distributionManagement>
+    <repository>
+      <id>folio-nexus</id>
+      <name>FOLIO Release Repository</name>
+      <url>https://repository.folio.org/repository/maven-releases/</url>
+      <uniqueVersion>false</uniqueVersion>
+      <layout>default</layout>
+    </repository>
+    <snapshotRepository>
+      <id>folio-nexus</id>
+      <name>FOLIO Snapshot Repository</name>
+      <uniqueVersion>true</uniqueVersion>
+      <url>https://repository.folio.org/repository/maven-snapshots/</url>
+      <layout>default</layout>
+    </snapshotRepository>
+  </distributionManagement>
+
 </project>
