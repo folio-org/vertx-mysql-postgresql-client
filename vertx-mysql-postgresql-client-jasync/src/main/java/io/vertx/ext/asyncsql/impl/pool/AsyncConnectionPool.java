@@ -223,6 +223,16 @@ public abstract class AsyncConnectionPool {
   }
 
   public synchronized void giveBack(Connection connection) {
+    if (availableConnections.contains(connection)) {
+      Exception e = new IllegalStateException("Cannot give back connection that already is available");
+      logger.error(e.getMessage(), e);
+      return;
+    }
+    if (timers.containsKey(connection)) {
+      Exception e = new IllegalStateException("Cannot give back connection that already has a release timer");
+      logger.error(e.getMessage(), e);
+      return;
+    }
     if (connection.isConnected()) {
       availableConnections.add(connection);
       if (connectionReleaseDelay > 0) {
